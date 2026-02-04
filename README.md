@@ -28,6 +28,7 @@ Before you can begin working on the GitHub workflow there are several Azure reso
 Variables:
 
 export SPN_NAME="<To be defined>"
+
 export SUBS_ID=$(az account show --query id)
 
     ```bash
@@ -36,10 +37,8 @@ export SUBS_ID=$(az account show --query id)
     ```
 
     > **TIP**
-    > **Store the JSON object in a secure place**. You'll use it to create a credential to authenticate to Azure with the Azure Login GitHub Action.
-    
-    > **NOTE**
-    > The credential lifetime will be set automatically according to your Azure tenant's policy (typically 90-180 days for restricted environments). The credential will need to be rotated when it expires.
+    > **Store the JSON object in a secure place**. You'll use it to create a credential to authenticate to Azure with the Azure DevOps Pipeline 
+
 
 2. Export Terraform environment variables
 
