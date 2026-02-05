@@ -2,15 +2,19 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "=3.19.1"
+      version = "~> 4.1.0"
     }
     azuread = {
       source  = "hashicorp/azuread"
-      version = "2.28.0"
+      version = "~> 2.28.0"
     }
     random = {
       source  = "hashicorp/random"
-      version = "=3.4.3"
+      version = "~> 3.4.3"
+    }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.9.0"
     }
   }
 }
@@ -18,40 +22,9 @@ terraform {
 provider "azurerm" {
   features {}
   
-  # These values can be set via environment variables from secret.env:
+  # Authentication is automatically configured via environment variables:
   # ARM_TENANT_ID, ARM_SUBSCRIPTION_ID, ARM_CLIENT_ID, ARM_CLIENT_SECRET
-  # Load them by running: export $(grep -v '^#' secret.env | xargs)
-  
-  tenant_id       = var.tenant_id
-  subscription_id = var.subscription_id
-  client_id       = var.client_id
-  client_secret   = var.client_secret
-}
-
-# Variables for Azure authentication (values from secret.env)
-variable "tenant_id" {
-  description = "Azure Active Directory Tenant ID"
-  type        = string
-  default     = ""  # Will be set via ARM_TENANT_ID env var
-}
-
-variable "subscription_id" {
-  description = "Azure Subscription ID"
-  type        = string
-  default     = ""  # Will be set via ARM_SUBSCRIPTION_ID env var
-}
-
-variable "client_id" {
-  description = "Service Principal Client ID (Application ID)"
-  type        = string
-  default     = ""  # Will be set via ARM_CLIENT_ID env var
-}
-
-variable "client_secret" {
-  description = "Service Principal Client Secret"
-  type        = string
-  sensitive   = true
-  default     = ""  # Will be set via ARM_CLIENT_SECRET env var
+  # Load them from secret.env using: set -a && source secret.env && set +a
 }
 
 data "azurerm_client_config" "current" {}
@@ -112,9 +85,9 @@ resource "azurerm_role_assignment" "kv_certificates_officer" {
 }
 
 # Key Vault Certificates User - Read certificate permissions
-resource "azurerm_role_assignment" "kv_certificates_user" {
+resource "azurerm_role_assignment" "kv_certificate_user" {
   scope                = azurerm_key_vault.kv.id
-  role_definition_name = "Key Vault Certificates User"
+  role_definition_name = "Key Vault Certificate User"
   principal_id         = data.azuread_client_config.current.object_id
   
   description = "Grants service principal certificate read permissions"
@@ -127,6 +100,17 @@ resource "azurerm_role_assignment" "kv_crypto_user" {
   principal_id         = data.azuread_client_config.current.object_id
   
   description = "Grants service principal cryptographic operations permissions"
+}
+
+# Wait for RBAC role assignments to propagate (can take up to 5 minutes)
+resource "time_sleep" "wait_for_rbac" {
+  depends_on = [
+    azurerm_role_assignment.kv_certificates_officer,
+    azurerm_role_assignment.kv_certificate_user,
+    azurerm_role_assignment.kv_crypto_user
+  ]
+  
+  create_duration = "60s"
 }
 
 # ============================================================================
@@ -154,88 +138,31 @@ resource "azurerm_container_registry" "acr" {
   zone_redundancy_enabled = false
 }
 
-# ACR Pull role assignment with ABAC condition
+# ACR Pull role assignment
 resource "azurerm_role_assignment" "acr_pull" {
   scope                = azurerm_container_registry.acr.id
   role_definition_name = "AcrPull"
   principal_id         = data.azuread_client_config.current.object_id
   
-  # ABAC condition: Allow pull only for images with specific tags
-  condition = <<-EOT
-    (
-      (
-        !(ActionMatches{'Microsoft.ContainerRegistry/registries/pull/read'})
-      )
-      OR
-      (
-        @Resource[Microsoft.ContainerRegistry/registries/artifacts/tag:tag] StringEquals 'latest'
-        OR
-        @Resource[Microsoft.ContainerRegistry/registries/artifacts/tag:tag] StringStartsWith 'v'
-        OR
-        @Resource[Microsoft.ContainerRegistry/registries/artifacts/tag:tag] StringStartsWith 'prod-'
-      )
-    )
-  EOT
-  
-  condition_version = "2.0"
-  
-  description = "ABAC-based ACR pull access for approved image tags"
+  description = "ACR pull access for container images"
 }
 
-# ACR Push role assignment with ABAC condition
+# ACR Push role assignment
 resource "azurerm_role_assignment" "acr_push" {
   scope                = azurerm_container_registry.acr.id
   role_definition_name = "AcrPush"
   principal_id         = data.azuread_client_config.current.object_id
   
-  # ABAC condition: Allow push only to specific repositories
-  condition = <<-EOT
-    (
-      (
-        !(ActionMatches{'Microsoft.ContainerRegistry/registries/push/write'})
-      )
-      OR
-      (
-        @Resource[Microsoft.ContainerRegistry/registries/repositories:name] StringEquals 'web-app-sample'
-        OR
-        @Resource[Microsoft.ContainerRegistry/registries/repositories:name] StringStartsWith 'approved/'
-        OR
-        @Resource[Microsoft.ContainerRegistry/registries/repositories:name] StringStartsWith 'prod/'
-      )
-    )
-  EOT
-  
-  condition_version = "2.0"
-  
-  description = "ABAC-based ACR push access for approved repositories"
+  description = "ACR push access for container images"
 }
 
-# ACR Delete role assignment with ABAC condition (optional - for cleanup)
+# ACR Delete role assignment (for cleanup operations)
 resource "azurerm_role_assignment" "acr_delete" {
   scope                = azurerm_container_registry.acr.id
   role_definition_name = "AcrDelete"
   principal_id         = data.azuread_client_config.current.object_id
   
-  # ABAC condition: Allow delete only for dev/test images
-  condition = <<-EOT
-    (
-      (
-        !(ActionMatches{'Microsoft.ContainerRegistry/registries/artifacts/delete'})
-      )
-      OR
-      (
-        @Resource[Microsoft.ContainerRegistry/registries/artifacts/tag:tag] StringStartsWith 'dev-'
-        OR
-        @Resource[Microsoft.ContainerRegistry/registries/artifacts/tag:tag] StringStartsWith 'test-'
-        OR
-        @Resource[Microsoft.ContainerRegistry/registries/repositories:name] StringStartsWith 'sandbox/'
-      )
-    )
-  EOT
-  
-  condition_version = "2.0"
-  
-  description = "ABAC-based ACR delete access for non-production artifacts"
+  description = "ACR delete access for artifact cleanup"
 }
 
 resource "azurerm_key_vault_certificate" "signingCert" {
@@ -286,9 +213,7 @@ resource "azurerm_key_vault_certificate" "signingCert" {
   }
   
   depends_on = [
-    azurerm_role_assignment.kv_certificates_officer,
-    azurerm_role_assignment.kv_certificates_user,
-    azurerm_role_assignment.kv_crypto_user
+    time_sleep.wait_for_rbac
   ]
 }
 

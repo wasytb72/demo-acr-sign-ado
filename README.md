@@ -29,7 +29,7 @@ Variables:
 
 export SPN_NAME="<To be defined>"
 
-export SUBS_ID=$(az account show --query id)
+export SUBS_ID=$(az account show --query id -o tsv)
 
     ```bash
     az ad sp create-for-rbac --name $SPN_NAME --role contributor \
