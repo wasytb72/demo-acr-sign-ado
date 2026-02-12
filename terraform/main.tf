@@ -73,6 +73,19 @@ resource "azurerm_key_vault" "kv" {
   
   # Enable RBAC authorization instead of access policies
   enable_rbac_authorization   = true
+  
+  # Allow public access from all networks
+  network_acls {
+    default_action = "Allow"
+    bypass         = "AzureServices"
+  }
+  
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes = [
+      tags
+    ]
+  }
 }
 
 # Key Vault Certificates Officer - Full certificate management permissions
@@ -199,12 +212,7 @@ resource "azurerm_key_vault_certificate" "signingCert" {
       extended_key_usage = ["1.3.6.1.5.5.7.3.3"]
 
       key_usage = [
-        "cRLSign",
-        "dataEncipherment",
         "digitalSignature",
-        "keyAgreement",
-        "keyCertSign",
-        "keyEncipherment",
       ]
 
       subject            = "CN=example.com"
@@ -241,13 +249,4 @@ output "resource_group_name" {
 output "signing_certificate_id" {
   description = "The Key Vault certificate ID for signing"
   value       = azurerm_key_vault_certificate.signingCert.id
-}
-
-output "abac_role_assignments" {
-  description = "Information about ABAC role assignments"
-  value = {
-    acr_pull_id   = azurerm_role_assignment.acr_pull.id
-    acr_push_id   = azurerm_role_assignment.acr_push.id
-    acr_delete_id = azurerm_role_assignment.acr_delete.id
-  }
 }
