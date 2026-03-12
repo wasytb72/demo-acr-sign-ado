@@ -24,17 +24,17 @@ By the end of this tutorial, you'll have a Azure Devops Pipeline that builds a s
 Before you can begin working on the Azure Devops pipeline there are several Azure resources that need to be deployed first. Follow the below instructions to deploy the required Azure infrastructure using Terraform.
 
 
-1. Create a service principal
+1. Create a service principal.
 
 Variables:
 
-export SPN_NAME="<To be defined>"
+export SPN_NAME="\<SPN NAME\>"
 
 export SUBS_ID=$(az account show --query id -o tsv)
 
     ```bash
-    az ad sp create-for-rbac --name $SPN_NAME --role contributor \
-    --scopes /subscriptions/$SUBS_ID
+    az ad sp create-for-rbac --name $SPN_NAME --role owner \
+        --scopes /subscriptions/$SUBS_ID
     ```
 
     > **TIP**
@@ -44,7 +44,7 @@ export SUBS_ID=$(az account show --query id -o tsv)
 > This kind of authentication is for demo only purposes and should not be used in production environments.
 
 
-2. Export Terraform environment variables. You have two ways of doing this:
+1. Export Terraform environment variables. You have two ways of doing this:
 
 **Option 1: Manually export each variable**
 
@@ -106,56 +106,51 @@ set -a
 
     When prompted type `yes` into the terminal and hit **enter**.
 
-5. Create an Azure Container Registry Token
-
-    ```bash
-    az acr token create \
-        --name <tokenName> \
-        --registry <registryName> \
-        --scope-map _repositories_admin \
-        --query 'credentials.passwords[0].value' \
-        --only-show-errors \
-        --output tsv
-    ```
-
-    > **TIP**
-    > **Store the password value in a secure place**. You'll need it if you later choose to use token-based authentication in your Azure DevOps pipeline.
-
-
 ## Create Azure DevOps Service Connection
 
-To run this pipeline securely in Azure DevOps, create an Azure Resource Manager service connection.
+To run this pipeline you need two service connections:
+
+Create an Azure Resource Manager service connections under the Service Principal created earlier:
 
 1. Open your Azure DevOps project
 2. Go to `Project settings` > `Service connections`
 3. Click `New service connection`
 4. Select `Azure Resource Manager`
 5. Configure the connection and grant access to pipelines
-6. Save the service connection name (you'll use it for `azureSubscription` in the pipeline YAML)
+6. Save the service connection name (you'll use it for `azurekvServiceConnection` in the pipeline YAML)
+
+Create an Docker Registry service connection.
+
+1. Open your Azure DevOps project
+2. Go to `Project settings` > `Service connections`
+3. Click `New service connection`
+4. Select `Docker Service Connection`
+5. Configure the connection and grant access to pipelines
+6. Save the service connection name (you'll use it for `containerRegistry` in the pipeline YAML)
 
 ## Update the Azure DevOps Pipeline
 
-With the Azure infrastructure deployed and the service connection configured, the last thing you have to do is update the Azure DevOps pipeline file.
+With the Azure infrastructure deployed and the service connections configured, the last thing you have to do is update the Azure DevOps pipeline file.
 
-1. Open the pipeline file located at `assets/azure-pipeline.yml`.
+1. Open the pipeline file located at `./assets/azure-pipeline.yml`.
 2. Replace all *placeholder* values from the table below with the appropriate information.
-3. Commit and push your changes to the repository.
+3. Create Pipeline with the yaml file indicated on the step 1
 
-Placeholder | Description | AzCli command
----------|----------|----------
- `<registry-name>` | Name of the Azure Container Registry | az acr list --query '[].name' -o tsv 
- `your-keyvault-name` | Name of the Azure Key Vault instance | az keyvault list --query '[].name' -o tsv
- `<key-name>` | Name of the signing certificate | az keyvault certificate list --vault-name $vaultName --query '[].name' -o tsv
- `<certificate-key-id>` | Key Id of the Azure Key Vault certificate | az keyvault certificate show --name example --vault-name $vaultName  --query kid -o tsv
+Placeholder | Description |
+---------|----------|
+ `<your-container-registry-service-connection>` |Name of the Docker Registry Service Connection
+ `<name-of-your-repository>` | Name of the Azure Container Registry
+ `<name-of-your-Azure-Resource-Manager-service-connection>` | Name of the Resource Manager Connection
+ `'https://<certficate-name>.vault.azure.net/keys/<key-name>/<key-version>'` | Fill out with the  name and key version of the certificate hosted in Key Vault
 
-Replace `$vaultName` with the name of your Azure Key Vault instance.
+
 
 ## Notation trust store template (self-signed Key Vault cert)
 
-If you want to verify signed images from a workstation or another pipeline using Notation, use the included trust store templates:
+If you want to verify signed images from a workstation or another pipeline using Notation, use the included trust store template:
 
-- `assets/notation/trustpolicy-selfsigned-akv.template.json`
-- `assets/notation/truststore-selfsigned-akv.template.md`
+- `./assets/notation/trustpolicy-selfsigned-akv.template.json`
+- Manually verification instructions: `./assets/notation/truststore-selfsigned-akv.template.md`
 
 These templates show how to export the certificate from Azure Key Vault, add it to a Notation trust store, and verify a signed image.
 

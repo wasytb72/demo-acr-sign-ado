@@ -2,6 +2,8 @@
 
 Use this template when an image is signed with a self-signed certificate stored in Azure Key Vault via the `azureKeyVault` Notation plugin.
 
+**This is a manually check process**
+
 ## 1) Export signer certificate from Key Vault
 
 ```bash
@@ -27,6 +29,26 @@ notation cert add \
   ./akv-selfsigned-signer.pem
 ```
 
+## 3) Json taxonomy
+```json
+{
+    "version": "1.0",
+    "trustPolicies": [
+        {
+            // Policy for all artifacts, from any registry location.
+            "name": "wabbit-networks-images",   // Name of the policy.
+            "registryScopes": [ "*" ],          // The registry artifacts to which the policy applies.
+            "signatureVerification": {          // The level of verification - strict, permissive, audit, skip.
+              "level" : "audit" 
+            },
+            "trustStores": ["ca:acme-rockets"], // The trust stores that contains the X.509 trusted roots.
+            "trustedIdentities": [              // Identities that are trusted to sign the artifact.
+              "x509.subject: C=US, ST=WA, L=Seattle, O=acme-rockets.io, OU=Finance, CN=SecureBuilder"
+            ]
+        }
+    ]
+}
+```
 ## 3) Install trust policy
 
 ```bash

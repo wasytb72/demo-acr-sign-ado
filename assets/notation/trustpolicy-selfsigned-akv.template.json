@@ -1,20 +1,16 @@
 {
-  "version": "1.0",
-  "trustPolicies": [
-    {
-      "name": "akv-selfsigned",
-      "registryScopes": [
-        "<registry-name>.azurecr.io/<namespace>/<repository-name>"
-      ],
-      "signatureVerification": {
-        "level": "strict"
-      },
-      "trustStores": [
-        "signingAuthority:akv-selfsigned-store"
-      ],
-      "trustedIdentities": [
-        "x509.subject: C=<country>, ST=<state>, O=<organization>, CN=<common-name>"
-      ]
-    }
-  ]
+    "version": "1.0",
+    "trustPolicies": [
+        {
+            "name": "wabbit-networks-images",
+            "registryScopes": [ "*" ],
+            "signatureVerification": {
+              "level" : "audit" 
+            },
+            "trustStores": ["ca:acme-rockets"],
+            "trustedIdentities": [
+              "x509.subject: C=US, ST=WA, L=Seattle, O=acme-rockets.io, OU=Finance, CN=SecureBuilder"
+            ]
+        }
+    ]
 }

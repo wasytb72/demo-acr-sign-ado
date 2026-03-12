@@ -13,7 +13,7 @@ steps:
 # build and push artifact to registry
 - task: Docker@2
   inputs:
-    repository: 'signcontainersimages'
+    repository: '<name-of-your-repository>'
     command: 'buildAndPush'
     Dockerfile: './Dockerfile'
 # install notation
@@ -27,14 +27,12 @@ steps:
     command: 'sign'
     plugin: 'azureKeyVault'
     akvPluginVersion: '1.2.1'
-    azurekvServiceConection: 'ARM2'
+    azurekvServiceConection: '<name-of-your-Azure-Resource-Manager-service-connection>'
     keyid: 'https://<certficate-name>.vault.azure.net/keys/<key-name>/<key-version>'
     selfSigned: true
-# verify the signed container
+# verify the signature of the artifact using the trust policy file and trust store.
 - task: Notation@0
   inputs:
     command: 'verify'
-    plugin: 'azureKeyVault'
-    akvPluginVersion: '1.2.1'
-    azurekvServiceConection: 'ARM2'
-    keyid: 'https://<certficate-name>.vault.azure.net/keys/<key-name>/<key-version>'
+    trustPolicy: 'trustpolicy-selfsigned-akv.template.json'
+    trustStore: './assets/notation'
