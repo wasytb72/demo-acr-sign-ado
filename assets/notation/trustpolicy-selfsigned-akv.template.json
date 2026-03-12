@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "trustPolicies": [
+    {
+      "name": "akv-selfsigned",
+      "registryScopes": [
+        "<registry-name>.azurecr.io/<namespace>/<repository-name>"
+      ],
+      "signatureVerification": {
+        "level": "strict"
+      },
+      "trustStores": [
+        "signingAuthority:akv-selfsigned-store"
+      ],
+      "trustedIdentities": [
+        "x509.subject: C=<country>, ST=<state>, O=<organization>, CN=<common-name>"
+      ]
+    }
+  ]
+}
