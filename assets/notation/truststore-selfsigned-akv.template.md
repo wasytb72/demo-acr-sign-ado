@@ -2,6 +2,8 @@
 
 Use this template when an image is signed with a self-signed certificate stored in Azure Key Vault via the `azureKeyVault` Notation plugin.
 
+**Only if you do not want to include the verify step in your ADO Pipeline**
+
 **This is a manually check process**
 
 ## 1) Export signer certificate from Key Vault
