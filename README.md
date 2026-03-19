@@ -138,7 +138,7 @@ With the Azure infrastructure deployed and the service connections configured, t
 
 Placeholder | Description |
 ---------|----------|
- `<your-container-registry-service-connection>` |Name of the Docker Registry Service Connection
+ `<your-container-registry-service-connection>` | Name of the Docker Registry Service Connection
  `<name-of-your-repository>` | Name of the Azure Container Registry
  `<name-of-your-Azure-Resource-Manager-service-connection>` | Name of the Resource Manager Connection
  `'https://<certficate-name>.vault.azure.net/keys/<key-name>/<key-version>'` | Fill out with the  name and key version of the certificate hosted in Key Vault
@@ -165,7 +165,7 @@ Congratulations! You've made it to the end of the tutorial. Your final tasks are
 
 **Confirm the digital signature exists**
 
-1. Open the Azure portal by going to [portal.azure.com](portal.azure.com)
+1. Open the Azure portal by going to [https://portal.azure.com](https://portal.azure.com)
 2. Navigate to your Azure Container Registry instance
 3. Under Services, select *Repositories*
 4. Select the web-app-sample repository
@@ -178,4 +178,4 @@ Congratulations! You've made it to the end of the tutorial. Your final tasks are
 - [setup-notation](https://github.com/Duffney/setup-notation)
 - [notary-sign-action](https://github.com/Duffney/notary-sign-action)
 - [notation-azure-kv](https://github.com/Azure/notation-azure-kv)
-- [Notary Project](https://github.com/notaryproject)# demo-acr-sign-ado
+- [Notary Project](https://github.com/notaryproject)
